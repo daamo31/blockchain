@@ -9,8 +9,8 @@ from wallet.wallet import Wallet
 
 app = Flask(__name__)
 blockchain = Blockchain()
-wallet = Wallet()
-node = Node(blockchain)
+wallet = Wallet() 
+node = Node(node_id=1, blockchain=blockchain)
 
 @app.route('/chain', methods=['GET'])
 def get_chain():

@@ -24,7 +24,7 @@ def main():
     blockchain = Blockchain()
 
     # Crear un nodo
-    node = Node(node_id=3, blockchain=blockchain)
+    node = Node(node_id=4, blockchain=blockchain)
 
     # Crear una billetera
     wallet = Wallet()
@@ -45,10 +45,14 @@ def main():
     # Recibir transacciones y minar bloques
     transaction = Transaction('sender', 'recipient', 10).to_dict()
     node.receive_transaction(transaction)
-    mined_block = node.mine_block()
-
-    # Recompensa por minar un bloque válido
-    wallet.add_balance(2)
+    
+    # Validar si todos los nodos coinciden antes de minar el bloque
+    if node.validate_all_nodes():
+        mined_block = node.mine_block()
+        # Recompensa por minar un bloque válido
+        wallet.add_balance(2)
+    else:
+        print("Error: Los nodos no coinciden, no se puede minar el bloque.")
 
 if __name__ == "__main__":
     server_thread = Thread(target=start_server)

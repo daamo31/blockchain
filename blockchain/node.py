@@ -34,9 +34,10 @@ class Node:
                 print(f"Error: No se pudo conectar a {peer}")
 
     def broadcast_new_block(self, block):
+        block_obj = Block.from_dict(block)
         for peer in self.peers:
             try:
-                requests.post(f"{peer}/block", json=block.to_dict())
+                requests.post(f"{peer}/block", json=block_obj.to_dict())
             except requests.exceptions.ConnectionError:
                 print(f"Error: No se pudo conectar a {peer}")
 
@@ -70,3 +71,16 @@ class Node:
         block = self.blockchain.create_block(proof, previous_hash)
         self.broadcast_new_block(block)
         return block
+
+    def validate_all_nodes(self):
+        for peer in self.peers:
+            try:
+                response = requests.get(f"{peer}/chain")
+                if response.status_code == 200:
+                    peer_chain = response.json()['chain']
+                    if not self.blockchain.is_valid_chain(peer_chain):
+                        return False
+            except requests.exceptions.ConnectionError:
+                print(f"Error: No se pudo conectar a {peer}")
+                return False
+        return True
