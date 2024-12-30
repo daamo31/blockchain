@@ -1,3 +1,4 @@
+# filepath: /Users/daniel/Desktop/blockchain/basic-blockchain/dashboard/app.py
 import sys
 import os
 import requests
@@ -9,8 +10,7 @@ from blockchain.node import Node
 from wallet.wallet import Wallet
 
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc, html
 from dash.dependencies import Input, Output
 
 server = Flask(__name__)
@@ -23,7 +23,7 @@ node = Node(node_id=1, blockchain=blockchain)
 @server.route('/chain', methods=['GET'])
 def get_chain():
     response = {
-        'chain': [block.to_dict() for block in blockchain.chain],
+        'chain': [block.__dict__ for block in blockchain.chain],  # Convertir objetos a diccionarios
         'length': len(blockchain.chain)
     }
     return jsonify(response), 200
@@ -60,7 +60,7 @@ def mine_block():
         block = node.mine_block()
         response = {
             'message': 'New Block Forged',
-            'block': block.to_dict()
+            'block': block.__dict__  # Convertir objeto a diccionario
         }
         return jsonify(response), 200
     except requests.exceptions.ConnectionError:
@@ -94,6 +94,9 @@ app.layout = html.Div([
         dcc.Tab(label='Transactions', children=[
             html.Div(id='transactions-content')
         ]),
+        dcc.Tab(label='Mined Blocks', children=[
+            html.Div(id='mined-blocks-content')
+        ]),
     ]),
     dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)
 ])
@@ -101,7 +104,7 @@ app.layout = html.Div([
 @app.callback(Output('chain-content', 'children'),
               [Input('interval-component', 'n_intervals')])
 def update_chain(n):
-    chain = [block.to_dict() for block in blockchain.chain]
+    chain = [block.__dict__ for block in blockchain.chain]  # Convertir objetos a diccionarios
     return html.Ul([html.Li(str(block)) for block in chain])
 
 @app.callback(Output('balance-content', 'children'),
@@ -115,6 +118,12 @@ def update_balance(n):
 def update_transactions(n):
     transactions = wallet.get_transactions()
     return html.Ul([html.Li(str(tx)) for tx in transactions])
+
+@app.callback(Output('mined-blocks-content', 'children'),
+              [Input('interval-component', 'n_intervals')])
+def update_mined_blocks(n):
+    mined_blocks = [block.__dict__ for block in blockchain.chain]  # Convertir objetos a diccionarios
+    return html.Ul([html.Li(str(block)) for block in mined_blocks])
 
 if __name__ == '__main__':
     # Conectar nodos entre sí al iniciar la aplicación
