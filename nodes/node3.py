@@ -1,5 +1,6 @@
 import sys
 import os
+
 import requests
 from flask import Flask
 from threading import Thread
@@ -20,19 +21,20 @@ def start_server():
     app.run(host='0.0.0.0', port=5053)
 
 def main():
-    # Inicializar la blockchain
+    # Inicializar la cadena de bloques
     blockchain = Blockchain()
-
+    
     # Crear un nodo
-    node = Node(node_id=4, blockchain=blockchain)
-
+    node = Node(node_id=3, blockchain=blockchain)
+    
     # Crear una billetera
     wallet = Wallet()
-
-    # Conectar a otros nodos (por ejemplo, node1 y node2)
-    node.connect_to_peer("http://localhost:5051")
-    node.connect_to_peer("http://localhost:5052")
-
+    
+    # Asegúrate de que los nodos estén en ejecución antes de iniciar las conexiones.
+    # Conectar con otros nodos (por ejemplo, node1 y node3)
+    node.connect_to_peer("http://localhost:5051")  # Conectar a node1
+    node.connect_to_peer("http://localhost:5052")  # Conectar a node3
+    
     # Esperar a que los otros nodos estén disponibles
     node.wait_for_peers()
     
@@ -41,6 +43,8 @@ def main():
         node.sync_blockchain()
     except requests.exceptions.ConnectionError:
         print("Error: No se pudo conectar a uno de los nodos.")
+    except Exception as e:
+        print(f"Error inesperado: {e}")
 
     # Recibir transacciones y minar bloques
     transaction = Transaction('sender', 'recipient', 10).to_dict()

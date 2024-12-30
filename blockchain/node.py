@@ -22,6 +22,9 @@ class Node:
                 except requests.exceptions.ConnectionError:
                     print(f"Esperando a que {peer} esté disponible...")
                     time.sleep(2)
+                except Exception as e:
+                    print(f"Error inesperado al conectar con {peer}: {e}")
+                    time.sleep(2)
 
     def sync_blockchain(self):
         for peer in self.peers:
@@ -32,6 +35,8 @@ class Node:
                     self.blockchain.replace_chain(peer_blockchain)
             except requests.exceptions.ConnectionError:
                 print(f"Error: No se pudo conectar a {peer}")
+            except Exception as e:
+                print(f"Error inesperado al sincronizar con {peer}: {e}")
 
     def broadcast_new_block(self, block):
         block_obj = Block.from_dict(block)
@@ -40,6 +45,8 @@ class Node:
                 requests.post(f"{peer}/block", json=block_obj.to_dict())
             except requests.exceptions.ConnectionError:
                 print(f"Error: No se pudo conectar a {peer}")
+            except Exception as e:
+                print(f"Error inesperado al transmitir a {peer}: {e}")
 
     def receive_new_block(self, block):
         # Convertir el bloque recibido a un objeto de bloque

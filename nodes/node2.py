@@ -30,6 +30,7 @@ def main():
     # Crear una billetera
     wallet = Wallet()
     
+    # Asegúrate de que los nodos estén en ejecución antes de iniciar las conexiones.
     # Conectar con otros nodos (por ejemplo, node1 y node3)
     node.connect_to_peer("http://localhost:5051")  # Conectar a node1
     node.connect_to_peer("http://localhost:5053")  # Conectar a node3
@@ -42,6 +43,8 @@ def main():
         node.sync_blockchain()
     except requests.exceptions.ConnectionError:
         print("Error: No se pudo conectar a uno de los nodos.")
+    except Exception as e:
+        print(f"Error inesperado: {e}")
 
     # Recibir transacciones y minar bloques
     transaction = Transaction('sender', 'recipient', 10).to_dict()
