@@ -8,12 +8,19 @@ from blockchain.blockchain import Blockchain
 from blockchain.node import Node
 from wallet.wallet import Wallet
 
-app = Flask(__name__)
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+
+server = Flask(__name__)
+app = dash.Dash(__name__, server=server, external_stylesheets=['https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'])
+
 blockchain = Blockchain()
-wallet = Wallet() 
+wallet = Wallet()
 node = Node(node_id=1, blockchain=blockchain)
 
-@app.route('/chain', methods=['GET'])
+@server.route('/chain', methods=['GET'])
 def get_chain():
     response = {
         'chain': [block.to_dict() for block in blockchain.chain],
@@ -21,21 +28,21 @@ def get_chain():
     }
     return jsonify(response), 200
 
-@app.route('/wallet/balance', methods=['GET'])
+@server.route('/wallet/balance', methods=['GET'])
 def get_balance():
     response = {
         'balance': wallet.get_balance()
     }
     return jsonify(response), 200
 
-@app.route('/wallet/transactions', methods=['GET'])
+@server.route('/wallet/transactions', methods=['GET'])
 def get_transactions():
     response = {
         'transactions': wallet.get_transactions()
     }
     return jsonify(response), 200
 
-@app.route('/wallet/transaction', methods=['POST'])
+@server.route('/wallet/transaction', methods=['POST'])
 def create_transaction():
     values = request.get_json()
     required = ['recipient', 'amount']
@@ -47,7 +54,7 @@ def create_transaction():
     response = {'message': 'Transaction will be added to Block and broadcasted to peers'}
     return jsonify(response), 201
 
-@app.route('/mine', methods=['GET'])
+@server.route('/mine', methods=['GET'])
 def mine_block():
     try:
         block = node.mine_block()
@@ -61,7 +68,7 @@ def mine_block():
     except Exception as e:
         return jsonify({'error': f'Error inesperado: {e}'}), 500
 
-@app.route('/connect_node', methods=['POST'])
+@server.route('/connect_node', methods=['POST'])
 def connect_node():
     values = request.get_json()
     nodes = values.get('nodes')
@@ -75,9 +82,43 @@ def connect_node():
     }
     return jsonify(response), 201
 
+app.layout = html.Div([
+    html.H1("Blockchain Dashboard"),
+    dcc.Tabs(id="tabs", children=[
+        dcc.Tab(label='Chain', children=[
+            html.Div(id='chain-content')
+        ]),
+        dcc.Tab(label='Wallet Balance', children=[
+            html.Div(id='balance-content')
+        ]),
+        dcc.Tab(label='Transactions', children=[
+            html.Div(id='transactions-content')
+        ]),
+    ]),
+    dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0)
+])
+
+@app.callback(Output('chain-content', 'children'),
+              [Input('interval-component', 'n_intervals')])
+def update_chain(n):
+    chain = [block.to_dict() for block in blockchain.chain]
+    return html.Ul([html.Li(str(block)) for block in chain])
+
+@app.callback(Output('balance-content', 'children'),
+              [Input('interval-component', 'n_intervals')])
+def update_balance(n):
+    balance = wallet.get_balance()
+    return html.P(f"Balance: {balance}")
+
+@app.callback(Output('transactions-content', 'children'),
+              [Input('interval-component', 'n_intervals')])
+def update_transactions(n):
+    transactions = wallet.get_transactions()
+    return html.Ul([html.Li(str(tx)) for tx in transactions])
+
 if __name__ == '__main__':
     # Conectar nodos entre sí al iniciar la aplicación
     node.connect_to_peer("http://localhost:5051")
     node.connect_to_peer("http://localhost:5052")
     node.connect_to_peer("http://localhost:5053")
-    app.run(host='0.0.0.0', port=5500, debug=True)
+    app.run_server(debug=True, port=5500)
