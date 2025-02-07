@@ -6,14 +6,16 @@ class Blockchain:
         self.current_transactions = []
         self.create_block(previous_hash='1', proof=100)
 
-    def create_block(self, proof, previous_hash):
+    def create_block(self, proof, previous_hash, transactions=None):
+        if transactions is None:
+            transactions = self.current_transactions
         block = {
             'index': len(self.chain) + 1,
             'timestamp': self.get_timestamp(),
-            'transactions': self.current_transactions,
+            'transactions': transactions,
             'proof': proof,
             'previous_hash': previous_hash,
-            'hash': self.hash_block(len(self.chain) + 1, self.get_timestamp(), self.current_transactions, proof, previous_hash)
+            'hash': self.hash_block(len(self.chain) + 1, self.get_timestamp(), transactions, proof, previous_hash)
         }
         self.current_transactions = []
         self.chain.append(block)

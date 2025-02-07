@@ -48,6 +48,14 @@ class Node:
             except Exception as e:
                 print(f"Error inesperado al transmitir a {peer}: {e}")
 
+        # Enviar el nuevo bloque al dashboard
+        try:
+            requests.post('http://localhost:5500/dashboard/update', json=block_obj.to_dict())
+        except requests.exceptions.ConnectionError:
+            print("Error: No se pudo conectar al dashboard")
+        except Exception as e:
+            print(f"Error inesperado al transmitir al dashboard: {e}")
+
     def receive_new_block(self, block):
         # Convertir el bloque recibido a un objeto de bloque
         new_block = Block(
@@ -75,7 +83,16 @@ class Node:
         last_proof = last_block['proof']
         proof = self.blockchain.proof_of_work(last_proof)
         previous_hash = last_block['hash']
-        block = self.blockchain.create_block(proof, previous_hash)
+        
+        # Obtener las primeras 3 transacciones
+        transactions = self.blockchain.current_transactions[:3]
+        
+        # Crear el bloque con las 3 transacciones
+        block = self.blockchain.create_block(proof, previous_hash, transactions)
+        
+        # Eliminar las transacciones minadas de la lista de transacciones actuales
+        self.blockchain.current_transactions = self.blockchain.current_transactions[3:]
+        
         self.broadcast_new_block(block)
         return block
 

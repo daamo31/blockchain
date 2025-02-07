@@ -1,14 +1,15 @@
-# filepath: /Users/daniel/Desktop/blockchain/basic-blockchain/simulation.py
 from blockchain.blockchain import Blockchain
 from blockchain.node import Node
 from blockchain.transaction import Transaction
 from wallet.wallet import Wallet
 import time
+import requests
+from cryptography.hazmat.primitives import serialization
+
+# Crear una instancia de la blockchain
+blockchain = Blockchain()
 
 def simulate_blockchain():
-    # Crear una instancia de la blockchain
-    blockchain = Blockchain()
-
     # Crear billeteras y nodos
     wallet1 = Wallet()
     wallet2 = Wallet()
@@ -24,10 +25,28 @@ def simulate_blockchain():
     node3.connect_to_peer("http://localhost:5051")
     node3.connect_to_peer("http://localhost:5052")
 
-    # Función para crear y enviar una transacción
+    # Función para crear y enviar una transacción a través de la API
     def create_and_send_transaction(sender_wallet, recipient_wallet, amount):
-        transaction = Transaction(sender_wallet.public_key, recipient_wallet.public_key, amount).to_dict()
-        node1.receive_transaction(transaction)
+        if sender_wallet.balance < amount:
+            print("Error: Saldo insuficiente para realizar la transacción.")
+            return
+
+        transaction_data = {
+            'sender': sender_wallet.public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ).decode('utf-8'),
+            'recipient': recipient_wallet.public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ).decode('utf-8'),
+            'amount': amount
+        }
+        response = requests.post('http://localhost:5500/wallet/transaction', json=transaction_data)
+        if response.status_code == 201:
+            print("Transacción creada y enviada con éxito.")
+        else:
+            print(f"Error al enviar la transacción: {response.text}")
 
     # Bucle para la minería automática de bloques
     while True:
@@ -46,7 +65,7 @@ def simulate_blockchain():
         # Mostrar el estado de la blockchain
         print("Blockchain:")
         for block in blockchain.chain:
-            print(block.__dict__)  # Convertir objeto a diccionario
+            print(block)  # Asumimos que block ya es un diccionario
 
         # Verificar la validez de la blockchain
         print("Blockchain válida:", blockchain.is_valid_chain(blockchain.chain))

@@ -8,6 +8,7 @@ from flask import Flask, jsonify, request
 from blockchain.blockchain import Blockchain
 from blockchain.node import Node
 from wallet.wallet import Wallet
+from cryptography.hazmat.primitives import serialization
 
 import dash
 from dash import dcc, html
@@ -16,6 +17,7 @@ from dash.dependencies import Input, Output
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server, external_stylesheets=['https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css'])
 
+# Usar la misma instancia de la blockchain
 blockchain = Blockchain()
 wallet = Wallet()
 node = Node(node_id=1, blockchain=blockchain)
@@ -23,7 +25,7 @@ node = Node(node_id=1, blockchain=blockchain)
 @server.route('/chain', methods=['GET'])
 def get_chain():
     response = {
-        'chain': [block.__dict__ for block in blockchain.chain],  # Convertir objetos a diccionarios
+        'chain': [block if isinstance(block, dict) else block.to_dict() for block in blockchain.chain],  # Convertir bloques a diccionarios si no lo son
         'length': len(blockchain.chain)
     }
     return jsonify(response), 200
@@ -48,7 +50,8 @@ def create_transaction():
     required = ['recipient', 'amount']
     if not all(k in values for k in required):
         return 'Missing values', 400
-    transaction = wallet.create_transaction(values['recipient'], values['amount'])
+    recipient_public_key = serialization.load_pem_public_key(values['recipient'].encode('utf-8'))
+    transaction = wallet.create_transaction(recipient_public_key, values['amount'])
     blockchain.add_transaction(transaction['sender'], transaction['recipient'], transaction['amount'])
     blockchain.broadcast_transaction(transaction)
     response = {'message': 'Transaction will be added to Block and broadcasted to peers'}
@@ -60,7 +63,7 @@ def mine_block():
         block = node.mine_block()
         response = {
             'message': 'New Block Forged',
-            'block': block.__dict__  # Convertir objeto a diccionario
+            'block': block if isinstance(block, dict) else block.to_dict()  # Convertir bloque a diccionario si no lo es
         }
         return jsonify(response), 200
     except requests.exceptions.ConnectionError:
@@ -104,7 +107,7 @@ app.layout = html.Div([
 @app.callback(Output('chain-content', 'children'),
               [Input('interval-component', 'n_intervals')])
 def update_chain(n):
-    chain = [block.__dict__ for block in blockchain.chain]  # Convertir objetos a diccionarios
+    chain = [block if isinstance(block, dict) else block.to_dict() for block in blockchain.chain]  # Convertir bloques a diccionarios si no lo son
     return html.Ul([html.Li(str(block)) for block in chain])
 
 @app.callback(Output('balance-content', 'children'),
@@ -122,7 +125,7 @@ def update_transactions(n):
 @app.callback(Output('mined-blocks-content', 'children'),
               [Input('interval-component', 'n_intervals')])
 def update_mined_blocks(n):
-    mined_blocks = [block.__dict__ for block in blockchain.chain]  # Convertir objetos a diccionarios
+    mined_blocks = [block if isinstance(block, dict) else block.to_dict() for block in blockchain.chain]  # Convertir bloques a diccionarios si no lo son
     return html.Ul([html.Li(str(block)) for block in mined_blocks])
 
 if __name__ == '__main__':
